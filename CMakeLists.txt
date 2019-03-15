@@ -12,6 +12,7 @@ endif()
 if(ENABLE_AVX2)
 	message("using av2")
 	add_definitions(-D_ENABLE_AVX2)
+	set(CMAKE_CXX_FLAGS "-mavx2")	
 endif()
 
 if(ENABLE_NEON)

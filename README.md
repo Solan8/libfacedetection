@@ -1,6 +1,6 @@
 # libfacedetection
 
-This is an open source library for CNN-based face detection in images. The CNN model has been converted to stastic variales in C source files. The source code does not depend on any other libraries. What you need is just a C++ compiler. You can compile the source code under Windows, Linux, ARM and any platform with a C++ compiler.
+This is an open source library for CNN-based face detection in images. The CNN model has been converted to static variales in C source files. The source code does not depend on any other libraries. What you need is just a C++ compiler. You can compile the source code under Windows, Linux, ARM and any platform with a C++ compiler.
 
 SIMD instructions are used to speedup the detection. You can enable AVX2 if you use Intel CPU or NEON for ARM.
 
@@ -26,12 +26,11 @@ mkdir -p build; cd build; rm -rf *;
 2. set opencv path since the example code depends on opencv
 
 ```
-OPENCV_SRC="/opencv/source/path"
 cmake \
     -DENABLE_INT8=ON \
     -DENABLE_NEON=ON \
     -DCMAKE_BUILD_TYPE=RELEASE \
-    -DCMAKE_TOOLCHAIN_FILE=/${OPENCV_SRC}/platforms/linux/aarch64-gnu.toolchain.cmake \
+    -DCMAKE_TOOLCHAIN_FILE=../aarch64-toolchain.cmake \
     -DDEMO=ON \
      ..
 

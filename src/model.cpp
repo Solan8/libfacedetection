@@ -57,7 +57,7 @@ the use of this software, even if advised of the possibility of such damage.
 #define NUM_CONV_LAYER 24
 
 #if defined(_ENABLE_INT8_CONV)
-extern signed char * param_ppConvCoefInt8[NUM_CONV_LAYER];
+extern int8_t * param_ppConvCoefInt8[NUM_CONV_LAYER];
 #else
 extern float * param_ppConvCoefFloat[NUM_CONV_LAYER];
 #endif
@@ -186,7 +186,7 @@ void init_parameters()
     }
 }
 
-vector<FaceRect> objectdetect_cnn(unsigned char * rgbImageData, int width, int height, int step)
+vector<FaceRect> objectdetect_cnn(uint8_t * rgbImageData, int width, int height, int step)
 {
     CDataBlob inputImage;
     CDataBlob pConvDataBlobs[NUM_CONV_LAYER];
@@ -208,16 +208,16 @@ vector<FaceRect> objectdetect_cnn(unsigned char * rgbImageData, int width, int h
     }
     TIME_END("init");
 
-  
+
     total = 0.0;
-  
+
     TIME_START;
     //inputImage.setDataFromImage(rgbImageData, width, height, 3, step, param_pMean);
     inputImage.setDataFrom3x3S2P1to1x1S1P0FromImage(rgbImageData, width, height, 3, step, param_pMean);
     TIME_END("convert data");
 
 
-/***************CONV1*********************/
+    /***************CONV1*********************/
     int convidx = 0;
     TIME_START;
     convolution(&inputImage, param_pFilters + convidx, pConvDataBlobs + convidx);
@@ -238,138 +238,138 @@ vector<FaceRect> objectdetect_cnn(unsigned char * rgbImageData, int width, int h
     maxpooling2x2S2(pConvDataBlobs+convidx, &pool1);
     TIME_END("pool1");
 
-/***************CONV2*********************/
+    /***************CONV2*********************/
     convidx++;
-TIME_START;
+    TIME_START;
     convolution(&pool1, param_pFilters+convidx, pConvDataBlobs+convidx);
-TIME_END("conv21");
-TIME_START;
+    TIME_END("conv21");
+    TIME_START;
     relu(pConvDataBlobs+convidx);
-TIME_END("relu21");
+    TIME_END("relu21");
 
-convidx++;
-TIME_START;
+    convidx++;
+    TIME_START;
     convolution(pConvDataBlobs+convidx-1, param_pFilters+convidx, pConvDataBlobs+convidx);
-TIME_END("conv22");
-TIME_START
+    TIME_END("conv22");
+    TIME_START
     relu(pConvDataBlobs+convidx);
-TIME_END("relu22");
+    TIME_END("relu22");
 
-TIME_START;
+    TIME_START;
     maxpooling2x2S2(pConvDataBlobs+convidx, &pool2);
-TIME_END("pool2");
+    TIME_END("pool2");
 
-/***************CONV3*********************/
+    /***************CONV3*********************/
     convidx++;
-TIME_START;
+    TIME_START;
     convolution(&pool2, param_pFilters+convidx, pConvDataBlobs+convidx);
-TIME_END("conv31");
-TIME_START;
+    TIME_END("conv31");
+    TIME_START;
     relu(pConvDataBlobs+convidx);
-TIME_END("relu31");
+    TIME_END("relu31");
 
-convidx++;
-TIME_START;
+    convidx++;
+    TIME_START;
     convolution(pConvDataBlobs+convidx-1, param_pFilters+convidx, pConvDataBlobs+convidx);
-TIME_END("conv32");
-TIME_START;
+    TIME_END("conv32");
+    TIME_START;
     relu(pConvDataBlobs+convidx);
-TIME_END("relu32");
+    TIME_END("relu32");
 
-convidx++;
-TIME_START;
+    convidx++;
+    TIME_START;
     convolution(pConvDataBlobs+convidx-1, param_pFilters+convidx, pConvDataBlobs+convidx);
-TIME_END("conv33");
-TIME_START;
+    TIME_END("conv33");
+    TIME_START;
     relu(pConvDataBlobs+convidx);
-TIME_END("relu33");
+    TIME_END("relu33");
 
-TIME_START;
+    TIME_START;
     maxpooling2x2S2(pConvDataBlobs+convidx, &pool3);
-TIME_END("pool3");
+    TIME_END("pool3");
 
-/***************CONV4*********************/
+    /***************CONV4*********************/
     convidx++;
-TIME_START;
+    TIME_START;
     convolution(&pool3, param_pFilters+convidx, pConvDataBlobs+convidx);
-TIME_END("conv41");
-TIME_START
+    TIME_END("conv41");
+    TIME_START
     relu(pConvDataBlobs+convidx);
-TIME_END("relu41");
+    TIME_END("relu41");
 
-convidx++;
-TIME_START;
+    convidx++;
+    TIME_START;
     convolution(pConvDataBlobs+convidx-1, param_pFilters+convidx, pConvDataBlobs+convidx);
-TIME_END("conv42");
-TIME_START;
+    TIME_END("conv42");
+    TIME_START;
     relu(pConvDataBlobs+convidx);
-TIME_END("relu42");
+    TIME_END("relu42");
 
-convidx++;
-TIME_START;
+    convidx++;
+    TIME_START;
     convolution(pConvDataBlobs+convidx-1, param_pFilters+convidx, pConvDataBlobs+convidx);
-TIME_END("conv43");
-TIME_START;
+    TIME_END("conv43");
+    TIME_START;
     relu(pConvDataBlobs+convidx);
-TIME_END("relu43");
+    TIME_END("relu43");
 
-TIME_START;
+    TIME_START;
     maxpooling2x2S2(pConvDataBlobs+convidx, &pool4);
-TIME_END("pool4");
+    TIME_END("pool4");
 
-/***************CONV5*********************/
+    /***************CONV5*********************/
     convidx++;
-TIME_START;
+    TIME_START;
     convolution(&pool4, param_pFilters+convidx, pConvDataBlobs+convidx);
-TIME_END("conv51");
-TIME_START;
+    TIME_END("conv51");
+    TIME_START;
     relu(pConvDataBlobs+convidx);
-TIME_END("relu51");
+    TIME_END("relu51");
 
-convidx++;
-TIME_START;
-    convolution(pConvDataBlobs+convidx-1, param_pFilters+convidx, pConvDataBlobs+convidx);
-TIME_END("conv52");
-TIME_START
-    relu(pConvDataBlobs+convidx);
-TIME_END("relu52");
-
-convidx++;
-TIME_START;
-    convolution(pConvDataBlobs+convidx-1, param_pFilters+convidx, pConvDataBlobs+convidx);
-TIME_END("conv53");
-TIME_START;
-    relu(pConvDataBlobs+convidx);
-TIME_END("relu53");
-
-TIME_START;
-    maxpooling2x2S2(pConvDataBlobs+convidx, &pool5);
-TIME_END("pool5");
-
-/***************CONV6*********************/
     convidx++;
-TIME_START;
+    TIME_START;
+    convolution(pConvDataBlobs+convidx-1, param_pFilters+convidx, pConvDataBlobs+convidx);
+    TIME_END("conv52");
+    TIME_START
+    relu(pConvDataBlobs+convidx);
+    TIME_END("relu52");
+
+    convidx++;
+    TIME_START;
+    convolution(pConvDataBlobs+convidx-1, param_pFilters+convidx, pConvDataBlobs+convidx);
+    TIME_END("conv53");
+    TIME_START;
+    relu(pConvDataBlobs+convidx);
+    TIME_END("relu53");
+
+    TIME_START;
+    maxpooling2x2S2(pConvDataBlobs+convidx, &pool5);
+    TIME_END("pool5");
+
+    /***************CONV6*********************/
+    convidx++;
+    TIME_START;
     convolution(&pool5, param_pFilters+convidx, pConvDataBlobs+convidx);
-TIME_END("conv61");
-TIME_START;
+    TIME_END("conv61");
+    TIME_START;
     relu(pConvDataBlobs+convidx);
-TIME_END("relu61");
+    TIME_END("relu61");
 
-convidx++;
-TIME_START;
+    convidx++;
+    TIME_START;
     convolution(pConvDataBlobs+convidx-1, param_pFilters+convidx, pConvDataBlobs+convidx);
-TIME_END("conv62");
-TIME_START
+    TIME_END("conv62");
+    TIME_START
     relu(pConvDataBlobs+convidx);
-TIME_END("relu62");
+    TIME_END("relu62");
 
-convidx++;
-TIME_START;
+    convidx++;
+    TIME_START;
     convolution(pConvDataBlobs+convidx-1, param_pFilters+convidx, pConvDataBlobs+convidx);
-TIME_END("conv63");
-TIME_START;
+    TIME_END("conv63");
+    TIME_START;
     relu(pConvDataBlobs+convidx);
-TIME_END("relu63");
+    TIME_END("relu63");
 
     /***************PRIORBOX3*********************/
     int conv3idx = 6;
@@ -400,7 +400,7 @@ TIME_END("relu63");
 
     convidx++;
     TIME_START
-        convolution(pConvDataBlobs + conv4idx, param_pFilters + convidx, pConvDataBlobs + convidx);
+    convolution(pConvDataBlobs + conv4idx, param_pFilters + convidx, pConvDataBlobs + convidx);
     TIME_END("prior4 loc");
 
     convidx++;
@@ -421,7 +421,7 @@ TIME_END("relu63");
 
     convidx++;
     TIME_START
-        convolution(pConvDataBlobs + conv5idx, param_pFilters + convidx, pConvDataBlobs + convidx);
+    convolution(pConvDataBlobs + conv5idx, param_pFilters + convidx, pConvDataBlobs + convidx);
     TIME_END("prior5 loc");
 
     convidx++;
@@ -442,7 +442,7 @@ TIME_END("relu63");
 
     convidx++;
     TIME_START
-        convolution(pConvDataBlobs + conv6idx, param_pFilters + convidx, pConvDataBlobs + convidx);
+    convolution(pConvDataBlobs + conv6idx, param_pFilters + convidx, pConvDataBlobs + convidx);
     TIME_END("prior6 loc");
 
     convidx++;
@@ -457,7 +457,7 @@ TIME_END("relu63");
 
 
 
-TIME_START;
+    TIME_START;
     blob2vector(&conv3priorbox, &conv3priorbox_flat, true);
     blob2vector(pConvDataBlobs + 16, &conv3loc_flat, true);
     blob2vector(pConvDataBlobs + 17, &conv3conf_flat, true);
@@ -473,19 +473,19 @@ TIME_START;
     blob2vector(&conv6priorbox, &conv6priorbox_flat, true);
     blob2vector(pConvDataBlobs + 22, &conv6loc_flat, true);
     blob2vector(pConvDataBlobs + 23, &conv6conf_flat, true);
-TIME_END("prior flat");
+    TIME_END("prior flat");
 
 
 
-TIME_START
+    TIME_START
     concat4(&conv3priorbox_flat, &conv4priorbox_flat, &conv5priorbox_flat, &conv6priorbox_flat, &mbox_priorbox);
     concat4(&conv3loc_flat, &conv4loc_flat, &conv5loc_flat, &conv6loc_flat, &mbox_loc);
     concat4(&conv3conf_flat, &conv4conf_flat, &conv5conf_flat, &conv6conf_flat, &mbox_conf);
-TIME_END("concat prior")
+    TIME_END("concat prior")
 
-TIME_START
+    TIME_START
     softmax1vector2class(&mbox_conf);
-TIME_END("softmax")
+    TIME_END("softmax")
 
 
     CDataBlob facesInfo;
@@ -519,13 +519,14 @@ TIME_END("softmax")
         faces.push_back(r);
     }
     TIME_END("copy result");
-    
+
     TIME_TOTAL(total);
 
     return faces;
 }
-int * facedetect_cnn(unsigned char * result_buffer, //buffer memory for storing face detection results, !!its size must be 0x20000 Bytes!!
-    unsigned char * rgb_image_data, int width, int height, int step) //input image, it must be RGB (three-channel) image!
+
+int * facedetect_cnn(uint8_t * result_buffer, //buffer memory for storing face detection results, !!its size must be 0x20000 Bytes!!
+                     uint8_t * rgb_image_data, int width, int height, int step) //input image, it must be RGB (three-channel) image!
 {
 #ifdef	__CALL_LIMIT__
     static int call_count = 0;

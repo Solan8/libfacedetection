@@ -44,11 +44,11 @@ the use of this software, even if advised of the possibility of such damage.
 #include <stdint.h>
 
 int * facedetect_cnn(uint8_t * result_buffer, //buffer memory for storing face detection results, !!its size must be 0x20000 Bytes!!
-                    uint8_t * rgb_image_data, int width, int height, int step); //input image, it must be BGR (three channels) insteed of RGB image!
+                     uint8_t * rgb_image_data, int width, int height, int step); //input image, it must be BGR (three channels) insteed of RGB image!
 
 
 
-                    
+
 //DO NOT EDIT the following code if you don't really understand it.
 
 #if defined(_ENABLE_AVX2)
@@ -68,11 +68,6 @@ int * facedetect_cnn(uint8_t * result_buffer, //buffer memory for storing face d
 
 #if defined(_ENABLE_AVX2)&& defined(_ENABLE_NEON)
 #error Cannot enable the two of SSE2 AVX and NEON at the same time.
-#endif
-
-
-#if defined(_OPENMP)
-#include <omp.h>
 #endif
 
 
@@ -102,7 +97,7 @@ typedef struct FaceRect_
     int w;
     int h;
 }FaceRect;
-    
+
 
 class CDataBlob
 {
@@ -203,9 +198,6 @@ public:
         //the following code is faster than memset
         //but not only the padding bytes are set to zero.
         //BE CAREFUL!!!
-//#if defined(_OPENMP)
-//#pragma omp parallel for
-//#endif
         for (int r = 0; r < this->height; r++)
         {
             for (int c = 0; c < this->width; c++)
@@ -295,9 +287,6 @@ public:
         }
         create(imgWidth, imgHeight, imgChannels);
 
-//#if defined(_OPENMP)
-//#pragma omp parallel for
-//#endif
         for (int r = 0; r < imgHeight; r++)
         {
             for (int c = 0; c < imgWidth; c++)
@@ -334,9 +323,6 @@ public:
         //some elements in the blob should be initialized to 0
         memset(data_fp32, 0, width * height * floatChannelStepInByte);
 
-#if defined(_OPENMP)
-#pragma omp parallel for
-#endif
         for (int r = 0; r < this->height; r++)
         {
             for (int c = 0; c < this->width; c++)
@@ -360,7 +346,7 @@ public:
 
                         int output_channel_offset = ((fy + 1) * 3 + fx + 1) * 3; //3x3 filters, 3-channel image
 
-                        pData[output_channel_offset] = (float)(pImgData[0] - pChannelMean[0]);
+                        pData[output_channel_offset  ] = (float)(pImgData[0] - pChannelMean[0]);
                         pData[output_channel_offset+1] = (float)(pImgData[1] - pChannelMean[1]);
                         pData[output_channel_offset+2] = (float)(pImgData[2] - pChannelMean[2]);
 
@@ -433,9 +419,9 @@ public:
 
 class Filters {
 public:
-	vector<CDataBlob *> filters;
-	int pad;
-	int stride;
+    vector<CDataBlob *> filters;
+    int pad;
+    int stride;
     float scale; //element * scale = original value
 };
 

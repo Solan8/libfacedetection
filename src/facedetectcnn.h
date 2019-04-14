@@ -41,9 +41,10 @@ the use of this software, even if advised of the possibility of such damage.
 //#define _ENABLE_AVX2 //Please enable it if X64 CPU
 //#define _ENABLE_NEON //Please enable it if ARM CPU
 
+#include <stdint.h>
 
-int * facedetect_cnn(unsigned char * result_buffer, //buffer memory for storing face detection results, !!its size must be 0x20000 Bytes!!
-                    unsigned char * rgb_image_data, int width, int height, int step); //input image, it must be RGB (three-channel) image!
+int * facedetect_cnn(uint8_t * result_buffer, //buffer memory for storing face detection results, !!its size must be 0x20000 Bytes!!
+                    uint8_t * rgb_image_data, int width, int height, int step); //input image, it must be BGR (three channels) insteed of RGB image!
 
 
 
@@ -106,92 +107,99 @@ typedef struct FaceRect_
 class CDataBlob
 {
 public:
-	float * data_float;
-    signed char * data_int8;
-	int width;
-	int height;
-	int channels;
-	int floatChannelStepInByte;
+    float*  data_fp32;
+    int8_t* data_int8;
+
+    int width;
+    int height;
+    int channels;
+
+    int floatChannelStepInByte;
     int int8ChannelStepInByte;
+
     float int8float_scale;
     bool int8_data_valid;
+
 public:
-	CDataBlob() {
-        data_float = 0;
+    CDataBlob()
+    {
+        data_fp32 = 0;
         data_int8 = 0;
-		width = 0;
-		height = 0;
+        width = 0;
+        height = 0;
         channels = 0;
         floatChannelStepInByte = 0;
         int8ChannelStepInByte = 0;
         int8float_scale = 1.0f;
         int8_data_valid = false;
-	}
-	CDataBlob(int w, int h, int c)
-	{
-        data_float = 0;
+    }
+    CDataBlob(int w, int h, int c)
+    {
+        data_fp32 = 0;
         data_int8 = 0;
         create(w, h, c);
-	}
-	~CDataBlob()
-	{
+    }
+    ~CDataBlob()
+    {
         setNULL();
-	}
+    }
 
     void setNULL()
     {
-        if (data_float)
-            myFree(&data_float);
+        if (data_fp32)
+            myFree(&data_fp32);
         if (data_int8)
             myFree(&data_int8);
         width = height = channels = floatChannelStepInByte = int8ChannelStepInByte = 0;
         int8float_scale = 1.0f;
         int8_data_valid = false;
     }
-	bool create(int w, int h, int c)
-	{
+
+    bool create(int w, int h, int c)
+    {
         setNULL();
 
-		width = w;
-		height = h;
+        width = w;
+        height = h;
         channels = c;
+
         //alloc space for float array
         int remBytes = (sizeof(float)* channels) % (_MALLOC_ALIGN / 8);
-		if (remBytes == 0)
+        if (remBytes == 0)
             floatChannelStepInByte = channels * sizeof(float);
-		else
+        else
             floatChannelStepInByte = (channels * sizeof(float)) + (_MALLOC_ALIGN / 8) - remBytes;
-        data_float = (float*)myAlloc(width * height * floatChannelStepInByte);
+        data_fp32 = (float*)myAlloc(width * height * floatChannelStepInByte);
 
         //alloc space for int8 array
-        remBytes = (sizeof(char)* channels) % (_MALLOC_ALIGN / 8);
+        remBytes = (sizeof(int8_t)* channels) % (_MALLOC_ALIGN / 8);
         if (remBytes == 0)
-            int8ChannelStepInByte = channels * sizeof(char);
+            int8ChannelStepInByte = channels * sizeof(int8_t);
         else
-            int8ChannelStepInByte = (channels * sizeof(char)) + (_MALLOC_ALIGN / 8) - remBytes;
-        data_int8 = (signed char*)myAlloc(width * height * int8ChannelStepInByte);
+            int8ChannelStepInByte = (channels * sizeof(int8_t)) + (_MALLOC_ALIGN / 8) - remBytes;
+        data_int8 = (int8_t*)myAlloc(width * height * int8ChannelStepInByte);
 
-        if (data_float == NULL)
+        if (data_fp32 == NULL)
         {
             cerr << "Cannot alloc memeory for float data blob: " 
-                << width  << "*"
-                << height << "*"
-                << channels << endl;
+            << width  << "*"
+            << height << "*"
+            << channels << endl;
             return false;
         }
 
         if (data_int8 == NULL)
         {
             cerr << "Cannot alloc memeory for uint8 data blob: "
-                << width << "*"
-                << height << "*"
-                << channels << endl;
+            << width << "*"
+            << height << "*"
+            << channels << endl;
             return false;
         }
-        
-        //memset(data_float, 0, width * height * floatChannelStepInByte);
+
+        //memset(data_fp32, 0, width * height * floatChannelStepInByte);
         //memset(data_int8, 0, width * height * int8ChannelStepInByte);
-        
+
         //the following code is faster than memset
         //but not only the padding bytes are set to zero.
         //BE CAREFUL!!!
@@ -203,21 +211,21 @@ public:
             for (int c = 0; c < this->width; c++)
             {
                 int pixel_end = this->floatChannelStepInByte / sizeof(float);
-                float * pF = (float*)(this->data_float + (r * this->width + c) * this->floatChannelStepInByte/sizeof(float));
+                float * pF = (float*)(this->data_fp32 + (r * this->width + c) * this->floatChannelStepInByte/sizeof(float));
                 for (int ch = this->channels; ch < pixel_end; ch++)
                     pF[ch] = 0;
 
-                pixel_end = this->int8ChannelStepInByte / sizeof(char);
-                char * pI = (char*)(this->data_int8 + (r * this->width + c) * this->int8ChannelStepInByte/sizeof(char));
+                pixel_end = this->int8ChannelStepInByte / sizeof(int8_t);
+                int8_t * pI = (int8_t*)(this->data_int8 + (r * this->width + c) * this->int8ChannelStepInByte/sizeof(int8_t));
                 for (int ch = this->channels; ch < pixel_end; ch++)
                     pI[ch] = 0;
             }
         }
-        
-        return true;
-	}
 
-    bool setInt8DataFromCaffeFormat(signed char * pData, int dataWidth, int dataHeight, int dataChannels)
+        return true;
+    }
+
+    bool setInt8DataFromCaffeFormat(int8_t * pData, int dataWidth, int dataHeight, int dataChannels)
     {
         if (pData == NULL)
         {
@@ -236,7 +244,7 @@ public:
         for(int row = 0; row < height; row++)
             for (int col = 0; col < width; col++)
             {
-                signed char * p = (this->data_int8 + (width * row + col) * int8ChannelStepInByte /sizeof(char));
+                int8_t * p = (this->data_int8 + (width * row + col) * int8ChannelStepInByte /sizeof(int8_t));
                 for (int ch = 0; ch < channels; ch++)
                 {
                     p[ch] = pData[ch * height * width + row * width + col];
@@ -263,7 +271,7 @@ public:
         for (int row = 0; row < height; row++)
             for (int col = 0; col < width; col++)
             {
-                float * p = (this->data_float + (width * row + col) * floatChannelStepInByte / sizeof(float));
+                float * p = (this->data_fp32 + (width * row + col) * floatChannelStepInByte / sizeof(float));
                 for (int ch = 0; ch < channels; ch++)
                 {
                     p[ch] = pData[ch * height * width + row * width + col];
@@ -272,8 +280,8 @@ public:
         return true;
     }
 
-    bool setDataFromImage(const unsigned char * imgData, int imgWidth, int imgHeight, int imgChannels, int imgWidthStep,
-        int * pChannelMean)
+    bool setDataFromImage(const uint8_t * imgData, int imgWidth, int imgHeight, int imgChannels, int imgWidthStep,
+                          int * pChannelMean)
     {
         if (imgData == NULL)
         {
@@ -294,16 +302,16 @@ public:
         {
             for (int c = 0; c < imgWidth; c++)
             {
-                const unsigned char * pImgData = imgData + imgWidthStep * r + imgChannels * c;
-                float * pBlobData = this->data_float + (this->width * r + c) * this->floatChannelStepInByte /sizeof(float);
+                const uint8_t * pImgData = imgData + imgWidthStep * r + imgChannels * c;
+                float * pBlobData = this->data_fp32 + (this->width * r + c) * this->floatChannelStepInByte /sizeof(float);
                 for (int ch = 0; ch < imgChannels; ch++)
                     pBlobData[ch] = (float)(pImgData[ch] - pChannelMean[ch]);
             }
         }
         return true;
     }
-    bool setDataFrom3x3S2P1to1x1S1P0FromImage(const unsigned char * imgData, int imgWidth, int imgHeight, int imgChannels, int imgWidthStep,
-        int * pChannelMean)
+    bool setDataFrom3x3S2P1to1x1S1P0FromImage(const uint8_t * imgData, int imgWidth, int imgHeight, int imgChannels, int imgWidthStep,
+                                              int * pChannelMean)
     {
         if (imgData == NULL)
         {
@@ -324,7 +332,7 @@ public:
         create((imgWidth+1)/2, (imgHeight+1)/2, 27);
         //since the pixel assignment cannot fill all the elements in the blob. 
         //some elements in the blob should be initialized to 0
-        memset(data_float, 0, width * height * floatChannelStepInByte);
+        memset(data_fp32, 0, width * height * floatChannelStepInByte);
 
 #if defined(_OPENMP)
 #pragma omp parallel for
@@ -333,11 +341,11 @@ public:
         {
             for (int c = 0; c < this->width; c++)
             {
-                float * pData = this->data_float + (r * this->width + c) * this->floatChannelStepInByte / sizeof(float);
+                float * pData = this->data_fp32 + (r * this->width + c) * this->floatChannelStepInByte / sizeof(float);
                 for (int fy = -1; fy <= 1; fy++)
                 {
                     int srcy = r * 2 + fy;
-                    
+
                     if (srcy < 0 || srcy >= imgHeight) //out of the range of the image
                         continue;
 
@@ -348,7 +356,7 @@ public:
                         if (srcx < 0 || srcx >= imgWidth) //out of the range of the image
                             continue;
 
-                        const unsigned char * pImgData = imgData + imgWidthStep * srcy + imgChannels * srcx;
+                        const uint8_t * pImgData = imgData + imgWidthStep * srcy + imgChannels * srcx;
 
                         int output_channel_offset = ((fy + 1) * 3 + fx + 1) * 3; //3x3 filters, 3-channel image
 
@@ -365,17 +373,17 @@ public:
     }
     float getElementFloat(int x, int y, int channel)
     {
-        if (this->data_float)
+        if (this->data_fp32)
         {
             if (x >= 0 && x < this->width &&
                 y >= 0 && y < this->height &&
                 channel >= 0 && channel < this->channels)
             {
-                float * p = (float*)(this->data_float + (y*this->width + x)*this->floatChannelStepInByte / sizeof(float));
+                float * p = (float*)(this->data_fp32 + (y*this->width + x)*this->floatChannelStepInByte / sizeof(float));
                 return p[channel];
             }
-         }
-        
+        }
+
         return 0.f;
     }
     int getElementint8(int x, int y, int channel)
@@ -386,21 +394,21 @@ public:
                 y >= 0 && y < this->height &&
                 channel >= 0 && channel < this->channels)
             {
-                signed char * p = this->data_int8 + (y*this->width + x)*this->int8ChannelStepInByte/sizeof(char);
+                int8_t * p = this->data_int8 + (y*this->width + x)*this->int8ChannelStepInByte/sizeof(int8_t);
                 return p[channel];
             }
         }
-        
+
         return 0;
     }
 
     friend ostream &operator<<(ostream &output, const CDataBlob &dataBlob)
     {
         output << "DataBlob Size (Width, Height, Channel) = (" 
-            << dataBlob.width
-            << ", " << dataBlob.height 
-            << ", " << dataBlob.channels
-            << ")" << endl;
+        << dataBlob.width
+        << ", " << dataBlob.height 
+        << ", " << dataBlob.channels
+        << ")" << endl;
         for (int ch = 0; ch < dataBlob.channels; ch++)
         {
             output << "Channel " << ch << ": " << endl;
@@ -410,7 +418,7 @@ public:
                 output << "(";
                 for (int col = 0; col < dataBlob.width; col++)
                 {
-                    float * p = (dataBlob.data_float + (dataBlob.width * row + col) * dataBlob.floatChannelStepInByte/sizeof(float));
+                    float * p = (dataBlob.data_fp32 + (dataBlob.width * row + col) * dataBlob.floatChannelStepInByte/sizeof(float));
                     output << p[ch];
                     if (col != dataBlob.width - 1)
                         output << ", ";
@@ -443,4 +451,4 @@ bool detection_output(const CDataBlob * priorbox, const CDataBlob * loc, const C
 /* the input data for softmax must be a vector, the data stored in a multi-channel blob with size 1x1 */
 bool softmax1vector2class(const CDataBlob *inputOutputData);
 
-vector<FaceRect> objectdetect_cnn(unsigned char * rgbImageData, int with, int height, int step);
+vector<FaceRect> objectdetect_cnn(uint8_t * rgbImageData, int with, int height, int step);

@@ -146,7 +146,7 @@ inline float dotProductFloatChGeneral(float* p1, float * p2, int num, int length
 #endif 
 }
 
-inline int dotProductInt8ChGeneral(signed char * p1, signed char * p2, int num, int lengthInBytes)
+inline int dotProductInt8ChGeneral(int8_t * p1, int8_t * p2, int num, int lengthInBytes)
 {
 #if defined(_ENABLE_NEON) && defined(_ENABLE_INT8_CONV)
     //int sum = 0;
@@ -237,11 +237,11 @@ bool convolutionFloat1x1P0S1(const CDataBlob *inputData, const Filters* filters,
     {
         for (int col = 0; col < outputData->width; col++)
         {
-            float * pOut = (outputData->data_float + (row*outputData->width + col)*outputData->floatChannelStepInByte / sizeof(float));
-            float * pIn = (inputData->data_float + (row*inputData->width + col)*inputData->floatChannelStepInByte / sizeof(float));
+            float * pOut = (outputData->data_fp32 + (row*outputData->width + col)*outputData->floatChannelStepInByte / sizeof(float));
+            float * pIn = (inputData->data_fp32 + (row*inputData->width + col)*inputData->floatChannelStepInByte / sizeof(float));
             for (int ch = 0; ch < outputData->channels; ch++)
             {
-                float * pF = (float*)(filters->filters[ch]->data_float);
+                float * pF = (float*)(filters->filters[ch]->data_fp32);
                 pOut[ch] = dotProductFloatChGeneral(pIn, pF, inputData->channels, inputData->floatChannelStepInByte);
             }
         }
@@ -258,11 +258,11 @@ bool convolutionInt81x1P0S1(const CDataBlob *inputData, const Filters* filters, 
     {
         for (int col = 0; col < outputData->width; col++)
         {
-            float * pOut = (outputData->data_float + (row*outputData->width + col)*outputData->floatChannelStepInByte / sizeof(float));
-            signed char * pIn = (inputData->data_int8 + (row*inputData->width + col)*inputData->int8ChannelStepInByte / sizeof(char));
+            float * pOut = (outputData->data_fp32 + (row*outputData->width + col)*outputData->floatChannelStepInByte / sizeof(float));
+            int8_t * pIn = (inputData->data_int8 + (row*inputData->width + col)*inputData->int8ChannelStepInByte / sizeof(int8_t));
             for (int ch = 0; ch < outputData->channels; ch++)
             {
-                signed char * pF = (filters->filters[ch]->data_int8);
+                int8_t * pF = (filters->filters[ch]->data_int8);
                 pOut[ch] = (float)dotProductInt8ChGeneral(pIn, pF, inputData->channels, inputData->int8ChannelStepInByte);
             }
         }
@@ -295,9 +295,9 @@ bool convolutionFloat3x3P1ChGeneral(const CDataBlob *inputData, const Filters* f
             {
                 int srcy = src_centery - 1;
 
-                float * pIn = (inputData->data_float + (srcy *inputData->width + srcx_start)*elementStepInFloat);
-                float * pF = (filters->filters[ch]->data_float) + (srcx_start - col*stride + 1) * elementStepInFloat;
-                float * pOut = (outputData->data_float + (row*outputData->width + col)*outputData->floatChannelStepInByte / sizeof(float));
+                float * pIn = (inputData->data_fp32 + (srcy *inputData->width + srcx_start)*elementStepInFloat);
+                float * pF = (filters->filters[ch]->data_fp32) + (srcx_start - col*stride + 1) * elementStepInFloat;
+                float * pOut = (outputData->data_fp32 + (row*outputData->width + col)*outputData->floatChannelStepInByte / sizeof(float));
                 pOut[ch] = 0; //the new created blob is not zeros, clear it first
 
                 {
@@ -358,9 +358,9 @@ bool convolutionInt83x3P1ChGeneral(const CDataBlob *inputData, const Filters* fi
             {
                 int srcy = src_centery - 1;
 
-                signed char * pIn = (inputData->data_int8 + (srcy *inputData->width + srcx_start)*elementStep);
-                signed char * pF = (filters->filters[ch]->data_int8) + ( (srcx_start - col*stride + 1)) * elementStep;
-                float * pOut = (outputData->data_float + (row*outputData->width + col)*outputData->floatChannelStepInByte / sizeof(float));
+                int8_t * pIn = (inputData->data_int8 + (srcy *inputData->width + srcx_start)*elementStep);
+                int8_t * pF = (filters->filters[ch]->data_int8) + ( (srcx_start - col*stride + 1)) * elementStep;
+                float * pOut = (outputData->data_fp32 + (row*outputData->width + col)*outputData->floatChannelStepInByte / sizeof(float));
                 pOut[ch] = 0;//the new created blob is not zeros, clear it first
 
                 {
@@ -401,7 +401,7 @@ bool convolutionInt83x3P1ChGeneral(const CDataBlob *inputData, const Filters* fi
 
 bool convertFloat2Int8(CDataBlob * dataBlob)
 {
-    if (dataBlob->data_float == NULL || dataBlob->data_int8 == NULL)
+    if (dataBlob->data_fp32 == NULL || dataBlob->data_int8 == NULL)
     {
         cerr << __FUNCTION__ << ": The input data is null." << endl;
         return false;
@@ -417,7 +417,6 @@ bool convertFloat2Int8(CDataBlob * dataBlob)
 #endif
 
     float scale = 1.f;
-    float tmp;
 
     if (dataBlob->int8_data_valid)
         return true;
@@ -426,7 +425,7 @@ bool convertFloat2Int8(CDataBlob * dataBlob)
     {
         for (int col = 0; col < dataBlob->width; col++)
         {
-            float * pF = (dataBlob->data_float + (row*dataBlob->width + col)*dataBlob->floatChannelStepInByte / sizeof(float));
+            float * pF = (dataBlob->data_fp32 + (row*dataBlob->width + col)*dataBlob->floatChannelStepInByte / sizeof(float));
 
 #if defined(_ENABLE_NEON)
             for (int ch = 0; ch < dataBlob->channels; ch+=4)
@@ -440,6 +439,7 @@ bool convertFloat2Int8(CDataBlob * dataBlob)
 
             for (int ch = 0; ch < dataBlob->channels; ch++)
             {
+                float tmp;
                 //tmp = fabs(pF[ch]);
                 //maxval = MAX(maxval, tmp);
                 tmp = pF[ch];
@@ -475,15 +475,15 @@ bool convertFloat2Int8(CDataBlob * dataBlob)
 #endif
     for (int row = 0; row < dataBlob->height; row++)
     {
-        float tmp;
         for (int col = 0; col < dataBlob->width; col++)
         {
-            float * pF = (dataBlob->data_float + (row*dataBlob->width + col)*dataBlob->floatChannelStepInByte / sizeof(float));
-            signed char * pI = (dataBlob->data_int8 + (row*dataBlob->width + col)*dataBlob->int8ChannelStepInByte / sizeof(char));
+            float * pF = (dataBlob->data_fp32 + (row*dataBlob->width + col)*dataBlob->floatChannelStepInByte / sizeof(float));
+            int8_t * pI = (dataBlob->data_int8 + (row*dataBlob->width + col)*dataBlob->int8ChannelStepInByte / sizeof(int8_t));
 
 #if defined(_ENABLE_NEON)
             for (int ch = 0; ch < dataBlob->channels; ch+=4)
             {
+                float tmp;
                 float32x4_t a = vld1q_f32(pF + ch);
                 float32x4_t resultvec = vmulq_f32(a, scalevec);
                 
@@ -495,21 +495,22 @@ bool convertFloat2Int8(CDataBlob * dataBlob)
                 //vst1_s16(pI + ch, int16resultvec);
                 
                 tmp = vgetq_lane_f32(resultvec, 0);
-                pI[ch] = (signed char)(tmp + ((tmp>0) - 0.5f));
+                pI[ch] = (int8_t)(tmp + ((tmp>0) - 0.5f));
                 tmp = vgetq_lane_f32(resultvec, 1);
-                pI[ch+1] = (signed char)(tmp + ((tmp>0) - 0.5f));
+                pI[ch+1] = (int8_t)(tmp + ((tmp>0) - 0.5f));
                 tmp = vgetq_lane_f32(resultvec, 2);
-                pI[ch+2] = (signed char)(tmp + ((tmp>0) - 0.5f));
+                pI[ch+2] = (int8_t)(tmp + ((tmp>0) - 0.5f));
                 tmp = vgetq_lane_f32(resultvec, 3);
-                pI[ch+3] = (signed char)(tmp + ((tmp>0) - 0.5f));
+                pI[ch+3] = (int8_t)(tmp + ((tmp>0) - 0.5f));
             }
 #else
             for (int ch = 0; ch < dataBlob->channels; ch++)
             {
-                //pI[ch] = (signed char)round(pF[ch] * scale);
+                float tmp;
+                //pI[ch] = (int8_t)round(pF[ch] * scale);
                 //to speedup round() using the following code
                 tmp = pF[ch];
-                pI[ch] = (signed char)(tmp * scale + ((tmp>0)-0.5f));
+                pI[ch] = (int8_t)(tmp * scale + ((tmp>0)-0.5f));
             }
 #endif
         }
@@ -523,7 +524,7 @@ bool convertFloat2Int8(CDataBlob * dataBlob)
 
 bool convolution(CDataBlob *inputData, const Filters* filters, CDataBlob *outputData)
 {
-    if (inputData->data_float == NULL || inputData->data_int8 == NULL)
+    if (inputData->data_fp32 == NULL || inputData->data_int8 == NULL)
     {
         cerr << __FUNCTION__ << ": The input data is null." << endl;
         return false;
@@ -585,7 +586,7 @@ bool convolution(CDataBlob *inputData, const Filters* filters, CDataBlob *output
             outputW = inputData->width;
             outputH = inputData->height;
         }
-        else if (filterS = 2 && filterP == 1)
+        else if (filterS == 2 && filterP == 1)
         {
             outputW = (inputData->width + 1) / 2;
             outputH = (inputData->height + 1) / 2;
@@ -620,7 +621,7 @@ bool convolution(CDataBlob *inputData, const Filters* filters, CDataBlob *output
         {
             for (int col = 0; col < inputData->width; col++)
             {
-                float * pF = (inputData->data_float + (row*inputData->width + col)*inputData->floatChannelStepInByte / sizeof(float));
+                float * pF = (inputData->data_fp32 + (row*inputData->width + col)*inputData->floatChannelStepInByte / sizeof(float));
                 for (int ch = 0; ch < inputData->channels; ch++)
                 {
                     maxval = MAX(maxval, pF[ch]);
@@ -662,7 +663,7 @@ bool convolution(CDataBlob *inputData, const Filters* filters, CDataBlob *output
 //only 2X2 S2 is supported
 bool maxpooling2x2S2(const CDataBlob *inputData, CDataBlob *outputData)
 {
-    if (inputData->data_float == NULL)
+    if (inputData->data_fp32 == NULL)
     {
         cerr << __FUNCTION__ << ": The input data is null." << endl;
         return false;
@@ -700,8 +701,8 @@ bool maxpooling2x2S2(const CDataBlob *inputData, CDataBlob *outputData)
                     inputMatOffsetsInElement[elementCount++] = (fy *inputData->width + fx) * inputData->floatChannelStepInByte / sizeof(float);
                 }
 
-            float * pOut = outputData->data_float + (row*outputData->width + col) * outputData->floatChannelStepInByte / sizeof(float);
-            float * pIn = inputData->data_float;
+            float * pOut = outputData->data_fp32 + (row*outputData->width + col) * outputData->floatChannelStepInByte / sizeof(float);
+            float * pIn = inputData->data_fp32;
 
 #if defined(_ENABLE_NEON)
             for (int ch = 0; ch < outputData->channels; ch += 4)
@@ -749,7 +750,7 @@ bool maxpooling2x2S2(const CDataBlob *inputData, CDataBlob *outputData)
 
 bool concat4(const CDataBlob *inputData1, const CDataBlob *inputData2, const CDataBlob *inputData3, const CDataBlob *inputData4, CDataBlob *outputData)
 {
-    if ((inputData1->data_float == NULL) || (inputData2->data_float == NULL) || (inputData3->data_float == NULL) || (inputData4->data_float == NULL))
+    if ((inputData1->data_fp32 == NULL) || (inputData2->data_fp32 == NULL) || (inputData3->data_fp32 == NULL) || (inputData4->data_fp32 == NULL))
     {
         cerr << __FUNCTION__ << ": The input data is null." << endl;
         return false;
@@ -781,11 +782,11 @@ bool concat4(const CDataBlob *inputData1, const CDataBlob *inputData2, const CDa
     {
         for (int col = 0; col < outputData->width; col++)
         {
-            float * pOut = (outputData->data_float + (row*outputData->width + col)*outputData->floatChannelStepInByte / sizeof(float));
-            float * pIn1 = (inputData1->data_float + (row*inputData1->width + col)*inputData1->floatChannelStepInByte / sizeof(float));
-            float * pIn2 = (inputData2->data_float + (row*inputData2->width + col)*inputData2->floatChannelStepInByte / sizeof(float));
-            float * pIn3 = (inputData3->data_float + (row*inputData3->width + col)*inputData3->floatChannelStepInByte / sizeof(float));
-            float * pIn4 = (inputData4->data_float + (row*inputData4->width + col)*inputData4->floatChannelStepInByte / sizeof(float));
+            float * pOut = (outputData->data_fp32 + (row*outputData->width + col)*outputData->floatChannelStepInByte / sizeof(float));
+            float * pIn1 = (inputData1->data_fp32 + (row*inputData1->width + col)*inputData1->floatChannelStepInByte / sizeof(float));
+            float * pIn2 = (inputData2->data_fp32 + (row*inputData2->width + col)*inputData2->floatChannelStepInByte / sizeof(float));
+            float * pIn3 = (inputData3->data_fp32 + (row*inputData3->width + col)*inputData3->floatChannelStepInByte / sizeof(float));
+            float * pIn4 = (inputData4->data_fp32 + (row*inputData4->width + col)*inputData4->floatChannelStepInByte / sizeof(float));
 
             memcpy(pOut, pIn1, sizeof(float)* inputData1->channels);
             memcpy(pOut + inputData1->channels, pIn2, sizeof(float)* inputData2->channels);
@@ -798,7 +799,7 @@ bool concat4(const CDataBlob *inputData1, const CDataBlob *inputData2, const CDa
 
 bool scale(CDataBlob * dataBlob, float scale)
 {
-    if (dataBlob->data_float == NULL || dataBlob->data_int8 == NULL)
+    if (dataBlob->data_fp32 == NULL || dataBlob->data_int8 == NULL)
     {
         cerr << __FUNCTION__ << ": The input data is null." << endl;
         return false;
@@ -808,7 +809,7 @@ bool scale(CDataBlob * dataBlob, float scale)
     {
         for (int col = 0; col < dataBlob->width; col++)
         {
-            float * pF = (dataBlob->data_float + (row*dataBlob->width + col)*dataBlob->floatChannelStepInByte / sizeof(float));
+            float * pF = (dataBlob->data_fp32 + (row*dataBlob->width + col)*dataBlob->floatChannelStepInByte / sizeof(float));
 #if defined(_ENABLE_NEON)
             float32x4_t a, bscale;
             float32x4_t result_vec;
@@ -844,7 +845,7 @@ bool scale(CDataBlob * dataBlob, float scale)
 
 bool relu(const CDataBlob *inputOutputData)
 {
-    if (inputOutputData->data_float == NULL)
+    if (inputOutputData->data_fp32 == NULL)
     {
         cerr << __FUNCTION__ << ": The input data is null." << endl;
         return false;
@@ -855,7 +856,7 @@ bool relu(const CDataBlob *inputOutputData)
     {
         for (int col = 0; col < inputOutputData->width; col++)
         {
-            float * pData = (float*)(inputOutputData->data_float + (row*inputOutputData->width + col)*inputOutputData->floatChannelStepInByte / sizeof(float));
+            float * pData = (float*)(inputOutputData->data_fp32 + (row*inputOutputData->width + col)*inputOutputData->floatChannelStepInByte / sizeof(float));
 
 #if defined(_ENABLE_NEON)
             float32x4_t a, bzeros;
@@ -889,8 +890,8 @@ bool relu(const CDataBlob *inputOutputData)
 
 bool priorbox(const CDataBlob * featureData, const CDataBlob * imageData, int num_sizes, float * pWinSizes, CDataBlob * outputData)
 {
-    if ((featureData->data_float == NULL) ||
-        imageData->data_float == NULL||
+    if ((featureData->data_fp32 == NULL) ||
+        imageData->data_fp32 == NULL||
         pWinSizes == NULL)
     {
         cerr << __FUNCTION__ << ": The input data is null." << endl;
@@ -905,7 +906,7 @@ bool priorbox(const CDataBlob * featureData, const CDataBlob * imageData, int nu
 	float step_w = static_cast<float>(image_width) / feature_width;
 	float step_h = static_cast<float>(image_height) / feature_height;
 
-	float * output_data = outputData->data_float;
+	float * output_data = outputData->data_fp32;
 
 //    outputData->create(feature_width, feature_height, num_sizes * 4 * 2);
     outputData->create(feature_width, feature_height, num_sizes * 4);
@@ -914,7 +915,7 @@ bool priorbox(const CDataBlob * featureData, const CDataBlob * imageData, int nu
 	{
 		for (int w = 0; w < feature_width; ++w) 
 		{
-            float * pOut = (float*)(outputData->data_float + ( h * outputData->width + w) * outputData->floatChannelStepInByte / sizeof(float));
+            float * pOut = (float*)(outputData->data_fp32 + ( h * outputData->width + w) * outputData->floatChannelStepInByte / sizeof(float));
             int idx = 0;
             //priorbox
 			for (int s = 0; s < num_sizes; s++) 
@@ -944,7 +945,7 @@ bool priorbox(const CDataBlob * featureData, const CDataBlob * imageData, int nu
 
 bool normalize(CDataBlob * inputOutputData, float * pScale)
 {
-    if ((inputOutputData->data_float == NULL) || pScale == NULL)
+    if ((inputOutputData->data_fp32 == NULL) || pScale == NULL)
     {
         cerr << __FUNCTION__ << ": The input data is null." << endl;
         return false;
@@ -955,7 +956,7 @@ bool normalize(CDataBlob * inputOutputData, float * pScale)
     {
         for (int col = 0; col < inputOutputData->width; col++)
         {
-            float * pData = (float*)(inputOutputData->data_float + (row*inputOutputData->width + col)*inputOutputData->floatChannelStepInByte / sizeof(float));
+            float * pData = (float*)(inputOutputData->data_fp32 + (row*inputOutputData->width + col)*inputOutputData->floatChannelStepInByte / sizeof(float));
             float sum = FLT_EPSILON;
             float s = 0;
 #if defined(_ENABLE_NEON)
@@ -1025,7 +1026,7 @@ bool normalize(CDataBlob * inputOutputData, float * pScale)
 
 bool softmax1vector2class(const CDataBlob *inputOutputData)
 {
-    if (inputOutputData->data_float == NULL)
+    if (inputOutputData->data_fp32 == NULL)
     {
         cerr << __FUNCTION__ << ": The input data is null." << endl;
         return false;
@@ -1038,7 +1039,7 @@ bool softmax1vector2class(const CDataBlob *inputOutputData)
     }
 
     int num = inputOutputData->channels;
-    float * pData = (inputOutputData->data_float);
+    float * pData = (inputOutputData->data_fp32);
 
 #if defined(_OPENMP)
 #pragma omp parallel for
@@ -1061,7 +1062,7 @@ bool softmax1vector2class(const CDataBlob *inputOutputData)
 
 bool blob2vector(const CDataBlob * inputData, CDataBlob * outputData, bool isFloat)
 {
-    if (inputData->data_float == NULL)
+    if (inputData->data_fp32 == NULL)
     {
         cerr << __FUNCTION__ << ": The input data is null." << endl;
         return false;
@@ -1072,12 +1073,12 @@ bool blob2vector(const CDataBlob * inputData, CDataBlob * outputData, bool isFlo
     if (isFloat)
     {
         int bytesOfAChannel = inputData->channels * sizeof(float);
-        float * pOut = outputData->data_float;
+        float * pOut = outputData->data_fp32;
         for (int row = 0; row < inputData->height; row++)
         {
             for (int col = 0; col < inputData->width; col++)
             {
-                float * pIn = (inputData->data_float + (row*inputData->width + col)*inputData->floatChannelStepInByte / sizeof(float));
+                float * pIn = (inputData->data_fp32 + (row*inputData->width + col)*inputData->floatChannelStepInByte / sizeof(float));
                 memcpy(pOut, pIn, bytesOfAChannel);
                 pOut += inputData->channels;
             }
@@ -1085,13 +1086,13 @@ bool blob2vector(const CDataBlob * inputData, CDataBlob * outputData, bool isFlo
     }
     else
     {
-        int bytesOfAChannel = inputData->channels * sizeof(char);
-        signed char * pOut = outputData->data_int8;
+        int bytesOfAChannel = inputData->channels * sizeof(int8_t);
+        int8_t * pOut = outputData->data_int8;
         for (int row = 0; row < inputData->height; row++)
         {
             for (int col = 0; col < inputData->width; col++)
             {
-                signed char * pIn = (inputData->data_int8 + (row*inputData->width + col)*inputData->int8ChannelStepInByte / sizeof(char));
+                int8_t * pIn = (inputData->data_int8 + (row*inputData->width + col)*inputData->int8ChannelStepInByte / sizeof(int8_t));
                 memcpy(pOut, pIn, bytesOfAChannel);
                 pOut += inputData->channels;
             }
@@ -1152,7 +1153,7 @@ bool SortScoreBBoxPairDescend(const pair<float, NormalizedBBox>& pair1,   const 
 
 bool detection_output(const CDataBlob * priorbox, const CDataBlob * loc, const CDataBlob * conf, float overlap_threshold, float confidence_threshold, int top_k, int keep_top_k, CDataBlob * outputData)
 {
-    if (priorbox->data_float == NULL || loc->data_float == NULL || conf->data_float == NULL)
+    if (priorbox->data_fp32 == NULL || loc->data_fp32 == NULL || conf->data_fp32 == NULL)
     {
         cerr << __FUNCTION__ << ": The input data is null." << endl;
         return 0;
@@ -1165,9 +1166,9 @@ bool detection_output(const CDataBlob * priorbox, const CDataBlob * loc, const C
     }
 
     float prior_variance[4] = {0.1f, 0.1f, 0.2f, 0.2f};
-    float * pPriorBox = priorbox->data_float;
-    float * pLoc = loc->data_float;
-    float * pConf = conf->data_float;
+    float * pPriorBox = priorbox->data_fp32;
+    float * pLoc = loc->data_fp32;
+    float * pConf = conf->data_fp32;
 
     vector<pair<float, NormalizedBBox> > score_bbox_vec;
     vector<pair<float, NormalizedBBox> > final_score_bbox_vec;
@@ -1262,7 +1263,7 @@ bool detection_output(const CDataBlob * priorbox, const CDataBlob * loc, const C
         for (int fi = 0; fi < num_faces; fi++)
         {
             pair<float, NormalizedBBox> pp = final_score_bbox_vec[fi];
-            float * pOut = (outputData->data_float + fi * outputData->floatChannelStepInByte / sizeof(float));
+            float * pOut = (outputData->data_fp32 + fi * outputData->floatChannelStepInByte / sizeof(float));
             pOut[0] = pp.first;
             pOut[1] = pp.second.xmin;
             pOut[2] = pp.second.ymin;

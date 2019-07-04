@@ -60,20 +60,20 @@ typedef struct NormalizedBBox_
 
 void* myAlloc(size_t size)
 {
-	void *ptr = NULL;
+    void *ptr = NULL;
     int ret;
 
-	ret = posix_memalign(&ptr, _MALLOC_ALIGN, size);
-	if (ret != 0)
-		return NULL;
+    ret = posix_memalign(&ptr, _MALLOC_ALIGN, size);
+    if (ret != 0)
+        return NULL;
 
-	return ptr;
+    return ptr;
 }
 
 
 void myFree_(void* ptr)
 {
-	if (ptr)
+    if (ptr)
         free(ptr);
 }
 
@@ -108,7 +108,7 @@ inline float dotProductFloatChGeneral(float* p1, float * p2, int num, int length
     {
         avec = _mm256_load_ps(p1 + i);
         bvec = _mm256_load_ps(p2 + i);
-        //_mm256_fmadd_ps needs FMA support 
+        //_mm256_fmadd_ps needs FMA support
         //but _mm256_add_ps and _mm256_mul_ps only need AVX
 
         //sumvec = _mm256_add_ps(sumvec, _mm256_mul_ps(avec, bvec));
@@ -133,7 +133,7 @@ inline float dotProductFloatChGeneral(float* p1, float * p2, int num, int length
         sum += (p1[i] * p2[i]);
     }
     return sum;
-#endif 
+#endif
 }
 
 inline int dotProductInt8ChGeneral(int8_t * p1, int8_t * p2, int num, int lengthInBytes)
@@ -187,7 +187,7 @@ inline int dotProductInt8ChGeneral(int8_t * p1, int8_t * p2, int num, int length
     int i = 0;
 
     short sumarray[16];
-   
+
     __m256i temp_sum;
     __m128i ac, bc;
     __m256i as, bs;
@@ -326,18 +326,18 @@ bool convolutionFloat3x3P1ChGeneral(const CDataBlob *inputData, const Filters* f
     return true;
 }
 
-bool convolutionInt83x3P1ChGeneral(const CDataBlob *inputData, const Filters* filters, CDataBlob *outputData) 
-{ 
+bool convolutionInt83x3P1ChGeneral(const CDataBlob *inputData, const Filters* filters, CDataBlob *outputData)
+{
 #if defined(_OPENMP)
 #pragma omp parallel for
 #endif
-    for (int row = 0; row < outputData->height; row++) 
-    {  
+    for (int row = 0; row < outputData->height; row++)
+    {
         int elementStep = inputData->int8ChannelStepInByte;
         int stride = filters->stride;
         int src_centery = row * stride;
         for (int col = 0; col < outputData->width; col++)
-        { 
+        {
             int srcx_start = col * stride - 1;
             int srcx_end = srcx_start + 3;
             srcx_start = MAX(0, srcx_start);
@@ -386,7 +386,7 @@ bool convolutionInt83x3P1ChGeneral(const CDataBlob *inputData, const Filters* fi
             }
         }
     }
-    return true; 
+    return true;
 }
 
 bool convertFloat2Int8(CDataBlob * dataBlob)
@@ -476,14 +476,14 @@ bool convertFloat2Int8(CDataBlob * dataBlob)
                 float tmp;
                 float32x4_t a = vld1q_f32(pF + ch);
                 float32x4_t resultvec = vmulq_f32(a, scalevec);
-                
+
                 ////becuase Floating-point to integer conversions "vcvtq_s32_f32" use round towards zero.
                 ////but we need round to nearest
                 ////so we cannot use the following NEON instructions
                 //int32x4_t int32resultvec = vcvtq_s32_f32(resultvec);
                 //int16x4_t int16resultvec = vqmovn_s32(int32resultvec);
                 //vst1_s16(pI + ch, int16resultvec);
-                
+
                 tmp = vgetq_lane_f32(resultvec, 0);
                 pI[ch] = (int8_t)(tmp + ((tmp>0) - 0.5f));
                 tmp = vgetq_lane_f32(resultvec, 1);
@@ -647,7 +647,7 @@ bool convolution(CDataBlob *inputData, const Filters* filters, CDataBlob *output
     scale(outputData, 1.0f / (inputData->int8float_scale * filters->scale));
 #endif
 
-	return true;
+    return true;
 }
 
 //only 2X2 S2 is supported
@@ -893,27 +893,27 @@ bool priorbox(const CDataBlob * featureData, const CDataBlob * imageData, int nu
     int image_width = imageData->width * 2;
     int image_height = imageData->height * 2;
 
-	float step_w = static_cast<float>(image_width) / feature_width;
-	float step_h = static_cast<float>(image_height) / feature_height;
+    float step_w = static_cast<float>(image_width) / feature_width;
+    float step_h = static_cast<float>(image_height) / feature_height;
 
-	float * output_data = outputData->data_fp32;
+    float * output_data = outputData->data_fp32;
 
-//    outputData->create(feature_width, feature_height, num_sizes * 4 * 2);
+    //    outputData->create(feature_width, feature_height, num_sizes * 4 * 2);
     outputData->create(feature_width, feature_height, num_sizes * 4);
 
-	for (int h = 0; h < feature_height; ++h) 
-	{
-		for (int w = 0; w < feature_width; ++w) 
-		{
+    for (int h = 0; h < feature_height; ++h)
+    {
+        for (int w = 0; w < feature_width; ++w)
+        {
             float * pOut = (float*)(outputData->data_fp32 + ( h * outputData->width + w) * outputData->floatChannelStepInByte / sizeof(float));
             int idx = 0;
             //priorbox
-			for (int s = 0; s < num_sizes; s++) 
-			{
-				float min_size_ = pWinSizes[s];
+            for (int s = 0; s < num_sizes; s++)
+            {
+                float min_size_ = pWinSizes[s];
                 float box_width, box_height;
                 box_width = box_height = min_size_;
-                
+
                 float center_x = w * step_w + step_w / 2.0f;
                 float center_y = h * step_h + step_h / 2.0f;
                 // xmin
@@ -925,11 +925,11 @@ bool priorbox(const CDataBlob * featureData, const CDataBlob * imageData, int nu
                 // ymax
                 pOut[idx++] = (center_y + box_height / 2.f) / image_height;
 
-			}
-		}
-	}
-    
-    
+            }
+        }
+    }
+
+
     return true;
 }
 
@@ -1007,7 +1007,7 @@ bool normalize(CDataBlob * inputOutputData, float * pScale)
             s = 1.0f/sqrt(sum);
             for (int ch = 0; ch < inputOutputData->channels; ch++)
                 pData[ch] = pData[ch] * pScale[ch] * s;
-#endif            
+#endif
         }
     }
     return true;
@@ -1094,10 +1094,10 @@ bool blob2vector(const CDataBlob * inputData, CDataBlob * outputData, bool isFlo
 }
 
 void IntersectBBox(const NormalizedBBox& bbox1, const NormalizedBBox& bbox2,
-                   NormalizedBBox* intersect_bbox) 
+                   NormalizedBBox* intersect_bbox)
 {
     if (bbox2.xmin > bbox1.xmax || bbox2.xmax < bbox1.xmin ||
-        bbox2.ymin > bbox1.ymax || bbox2.ymax < bbox1.ymin) 
+        bbox2.ymin > bbox1.ymax || bbox2.ymax < bbox1.ymin)
     {
         // Return [0, 0, 0, 0] if there is no intersection.
         intersect_bbox->xmin = 0;
@@ -1122,20 +1122,20 @@ float JaccardOverlap(const NormalizedBBox& bbox1, const NormalizedBBox& bbox2)
     intersect_width = intersect_bbox.xmax - intersect_bbox.xmin;
     intersect_height = intersect_bbox.ymax - intersect_bbox.ymin;
 
-    if (intersect_width > 0 && intersect_height > 0) 
+    if (intersect_width > 0 && intersect_height > 0)
     {
         float intersect_size = intersect_width * intersect_height;
         float bsize1 = (bbox1.xmax - bbox1.xmin)*(bbox1.ymax - bbox1.ymin);
         float bsize2 = (bbox2.xmax - bbox2.xmin)*(bbox2.ymax - bbox2.ymin);
         return intersect_size / ( bsize1 + bsize2 - intersect_size);
     }
-    else 
+    else
     {
         return 0.f;
     }
 }
 
-bool SortScoreBBoxPairDescend(const pair<float, NormalizedBBox>& pair1,   const pair<float, NormalizedBBox>& pair2) 
+bool SortScoreBBoxPairDescend(const pair<float, NormalizedBBox>& pair1,   const pair<float, NormalizedBBox>& pair2)
 {
     return pair1.first > pair2.first;
 }
@@ -1223,13 +1223,13 @@ bool detection_output(const CDataBlob * priorbox, const CDataBlob * loc, const C
         bool keep = true;
         for (int k = 0; k < final_score_bbox_vec.size(); ++k)
         {
-            if (keep) 
+            if (keep)
             {
                 const NormalizedBBox bb2 = final_score_bbox_vec[k].second;
                 float overlap = JaccardOverlap(bb1, bb2);
                 keep = (overlap <= overlap_threshold);
             }
-            else 
+            else
             {
                 break;
             }

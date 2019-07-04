@@ -60,16 +60,12 @@ typedef struct NormalizedBBox_
 
 void* myAlloc(size_t size)
 {
-	char *ptr, *ptr0;
-	ptr0 = (char*)malloc(
-		(size_t)(size + _MALLOC_ALIGN * ((size >= 4096) + 1) + sizeof(char*)));
+	void *ptr = NULL;
+    int ret;
 
-	if (!ptr0)
-		return 0;
-
-	// align the pointer
-	ptr = (char*)(((size_t)(ptr0 + sizeof(char*) + 1) + _MALLOC_ALIGN - 1) & ~(size_t)(_MALLOC_ALIGN - 1));
-	*(char**)(ptr - sizeof(char*)) = ptr0;
+	ret = posix_memalign(&ptr, _MALLOC_ALIGN, size);
+	if (ret != 0)
+		return NULL;
 
 	return ptr;
 }
@@ -77,14 +73,8 @@ void* myAlloc(size_t size)
 
 void myFree_(void* ptr)
 {
-	// Pointer must be aligned by _MALLOC_ALIGN
 	if (ptr)
-	{
-		if (((size_t)ptr & (_MALLOC_ALIGN - 1)) != 0)
-			return;
-		free(*((char**)ptr - 1));
-	}
-
+        free(ptr);
 }
 
 
